@@ -1,9 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    output: "export",
-  images: {
-    unoptimized: true
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.(mp3)$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/media/[path][name][ext]'
+      }
+    })
+    return config
   }
-};
+}
 
-export default nextConfig;
+export default nextConfig
+// next.config.mjs
+

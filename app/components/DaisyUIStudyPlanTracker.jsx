@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react'
 import { studyPlan, milestones, daisyUIThemes, getSubjectColor } from '../Utils/studyPlanUtils'
 import { useRouter } from 'next/navigation'
 import { Calendar } from './Calendar'
+import { PomodoroTimer } from './PomodoroTimer'
+import { StudyStatistics } from './StudyStatistics'
+import { WhiteNoisePlayer } from './WhiteNoisePlayer'
 
 export default function EnhancedStudyPlanTracker() {
   const [plan, setPlan] = useState(() => studyPlan.map(day => ({
@@ -21,8 +24,16 @@ export default function EnhancedStudyPlanTracker() {
   const [showReflection, setShowReflection] = useState(false)
   const [reflection, setReflection] = useState('')
   const [rating, setRating] = useState(0)
-  const [viewMode, setViewMode] = useState('list') // 'list' or 'calendar'
+  const [viewMode, setViewMode] = useState('list')
   const [selectedDay, setSelectedDay] = useState(null)
+  const [selectedChapter, setSelectedChapter] = useState('')
+  const [studySessions, setStudySessions] = useState([])
+  const [timerState, setTimerState] = useState({
+    minutes: 25,
+    seconds: 0,
+    isActive: false,
+    isBreak: false,
+  })
 
   const router = useRouter()
 
@@ -31,6 +42,8 @@ export default function EnhancedStudyPlanTracker() {
     
     const storedPlan = localStorage.getItem('enhancedStudyPlan')
     const storedTheme = localStorage.getItem('enhancedStudyPlanTheme') || 'light'
+    const storedSessions = localStorage.getItem('studySessions')
+    const storedTimerState = localStorage.getItem('timerState')
     
     if (storedPlan) {
       try {
@@ -43,6 +56,26 @@ export default function EnhancedStudyPlanTracker() {
       }
     }
     
+    if (storedSessions) {
+      try {
+        const parsedSessions = JSON.parse(storedSessions)
+        if (Array.isArray(parsedSessions)) {
+          setStudySessions(parsedSessions)
+        }
+      } catch (error) {
+        console.error('Error parsing stored sessions:', error)
+      }
+    }
+    
+    if (storedTimerState) {
+      try {
+        const parsedTimerState = JSON.parse(storedTimerState)
+        setTimerState(parsedTimerState)
+      } catch (error) {
+        console.error('Error parsing stored timer state:', error)
+      }
+    }
+    
     setTheme(storedTheme)
     document.documentElement.setAttribute('data-theme', storedTheme)
   }, [])
@@ -50,8 +83,10 @@ export default function EnhancedStudyPlanTracker() {
   useEffect(() => {
     if (mounted) {
       localStorage.setItem('enhancedStudyPlan', JSON.stringify(plan))
+      localStorage.setItem('studySessions', JSON.stringify(studySessions))
+      localStorage.setItem('timerState', JSON.stringify(timerState))
     }
-  }, [plan, mounted])
+  }, [plan, studySessions, timerState, mounted])
 
   useEffect(() => {
     if (mounted) {
@@ -69,14 +104,12 @@ export default function EnhancedStudyPlanTracker() {
       }
       
       if (taskIndex === -1) {
-        // Toggle all tasks for the day
         const allCompleted = newPlan[dayIndex].tasks.every(task => task.completed)
         newPlan[dayIndex].tasks = newPlan[dayIndex].tasks.map(task => ({
           ...task,
           completed: !allCompleted
         }))
       } else {
-        // Toggle individual task
         newPlan[dayIndex].tasks[taskIndex] = {
           ...newPlan[dayIndex].tasks[taskIndex],
           completed: !newPlan[dayIndex].tasks[taskIndex].completed
@@ -169,17 +202,16 @@ export default function EnhancedStudyPlanTracker() {
     "Nothing is impossible, the word itself says 'I'm possible'! - Audrey Hepburn",
     "Don't wait for opportunity. Create it. - Anonymous",
     "The harder you work for something, the greater you'll feel when you achieve it. - Anonymous",
-    "Success doesn’t just find you. You have to go out and get it. - Anonymous",
+    "Success doesn't just find you. You have to go out and get it. - Anonymous",
     "The key to success is to focus on goals, not obstacles. - Anonymous",
     "Your only limit is your mind. - Anonymous",
-    "Opportunities don’t happen, you create them. - Chris Grosser",
+    "Opportunities don't happen, you create them. - Chris Grosser",
     "Success is not the key to happiness. Happiness is the key to success. If you love what you are doing, you will be successful. - Albert Schweitzer",
     "Hardships often prepare ordinary people for an extraordinary destiny. - C.S. Lewis",
     "Dream big and dare to fail. - Norman Vaughan",
     "Success is walking from failure to failure with no loss of enthusiasm. - Winston Churchill",
     "Do not wait to strike till the iron is hot, but make it hot by striking. - William Butler Yeats"
-];
-
+  ];
 
   const getMotivationalMessage = () => {
     return motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
@@ -200,6 +232,14 @@ export default function EnhancedStudyPlanTracker() {
         dayElement.scrollIntoView({ behavior: 'smooth' })
       }
     }, 100)
+  }
+
+  const handlePomodoroComplete = (duration) => {
+    setStudySessions([...studySessions, { chapter: selectedChapter, duration, timestamp: Date.now() }])
+  }
+
+  const updateTimerState = (newState) => {
+    setTimerState(newState)
   }
 
   if (!mounted) {
@@ -254,6 +294,12 @@ export default function EnhancedStudyPlanTracker() {
             >
               Calendar
             </button>
+            <button 
+              className={`btn ${viewMode === 'pomodoro' ? 'btn-active' : ''}`}
+              onClick={() => setViewMode('pomodoro')}
+            >
+              Pomodoro
+            </button>
           </div>
         </div>
       </div>
@@ -263,87 +309,119 @@ export default function EnhancedStudyPlanTracker() {
         <p className="text-center mt-2">Overall Progress: {getProgress().toFixed(2)}%</p>
       </div>
 
-      {viewMode === 'list' ? (
-        <div className="grid gap-4">
-          {filteredPlan.map((day, dayIndex) => (
-            <div key={day.day} className="card bg-base-100 shadow-xl" data-day={dayIndex}>
-              <div className="card-body">
-                <h2 className="card-title flex justify-between items-center">
-                  <span>Day {day.day}</span>
-                  {getMilestone(day.day) && (
-                    <span className="badge badge-lg badge-primary gap-2 p-4">
-                      <span className="text-xl">🎉</span>
-                      {getMilestone(day.day)?.description}
-                    </span>
-                  )}
-                </h2>
-                <div className="overflow-x-auto">
-                  <table className="table w-full">
-                    <thead>
-                      <tr>
-                        <th style={{width: '20%'}}>Time</th>
-                        <th style={{width: '60%'}}>Task</th>
-                        <th style={{width: '20%'}}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {day.tasks.map((task, taskIndex) => (
-                        <tr 
-                          key={`${day.day}-${taskIndex}`}
-                          className="hover cursor-pointer"
-                          onClick={() => toggleTask(dayIndex, taskIndex)}
-                        >
-                          <td style={{width: '20%'}}>{task.time}</td>
-                          <td 
-                            style={{width: '60%', backgroundColor: getSubjectColor(task.description)}}
-                            className={task.completed ? 'line-through' : ''}
-                          >
-                            {task.description}
-                          </td>
-                          <td style={{width: '20%'}}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2">
+          {viewMode === 'list' && (
+            <div className="grid gap-4">
+              {filteredPlan.map((day, dayIndex) => (
+                <div key={day.day} className="card bg-base-100 shadow-xl" data-day={dayIndex}>
+                  <div className="card-body">
+                    <h2 className="card-title flex justify-between items-center">
+                      <span>Day {day.day}</span>
+                      {getMilestone(day.day) && (
+                        <span className="badge badge-lg badge-primary gap-2 p-4">
+                          <span className="text-xl">🎉</span>
+                          {getMilestone(day.day)?.description}
+                        </span>
+                      )}
+                    </h2>
+                    <div className="overflow-x-auto">
+                      <table className="table w-full">
+                        <thead>
+                          <tr>
+                            <th style={{width: '20%'}}>Time</th>
+                            <th style={{width: '60%'}}>Task</th>
+                            <th style={{width: '20%'}}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {day.tasks.map((task, taskIndex) => (
+                            <tr 
+                              key={`${day.day}-${taskIndex}`}
+                              className="hover cursor-pointer"
+                              onClick={() => toggleTask(dayIndex, taskIndex)}
+                            >
+                              <td style={{width: '20%'}}>{task.time}</td>
+                              <td 
+                                style={{width: '60%', backgroundColor: getSubjectColor(task.description)}}
+                                className={task.completed ? 'line-through' : ''}
+                              >
+                                {task.description}
+                              </td>
+                              <td style={{width: '20%'}}>
+                                <input
+                                  type="checkbox"
+                                  checked={task.completed}
+                                  className="checkbox checkbox-primary"
+                                  readOnly
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {day.reflection && (
+                      <div className="mt-4">
+                        <h3 className="font-bold">Reflection:</h3>
+                        <p>{day.reflection}</p>
+                        <div className="rating mt-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
                             <input
-                              type="checkbox"
-                              checked={task.completed}
-                              className="checkbox checkbox-primary"
+                              key={star}
+                              type="radio"
+                              name={`rating-${day.day}`}
+                              className="mask mask-star-2 bg-orange-400"
+                              checked={day.rating === star}
                               readOnly
                             />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {day.reflection && (
-                  <div className="mt-4">
-                    <h3 className="font-bold">Reflection:</h3>
-                    <p>{day.reflection}</p>
-                    <div className="rating mt-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <input
-                          key={star}
-                          type="radio"
-                          name={`rating-${day.day}`}
-                          className="mask mask-star-2 bg-orange-400"
-                          checked={day.rating === star}
-                          readOnly
-                        />
-                      ))}
-                    </div>
-                    <button 
-                      className="btn btn-xs btn-ghost opacity-15"
-                      onClick={() => deleteReflection(dayIndex)}
-                    >
-                      X
-                    </button>
+                          ))}
+                        </div>
+                        <button 
+                          className="btn btn-xs btn-ghost opacity-15"
+                          onClick={() => deleteReflection(dayIndex)}
+                        >
+                          X
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {viewMode === 'calendar' && (
+            <Calendar plan={plan} onDayClick={handleDayClick} selectedDay={selectedDay} />
+          )}
+
+          {viewMode === 'pomodoro' && (
+            <StudyStatistics studySessions={studySessions} />
+          )}
         </div>
-      ) : (
-        <Calendar plan={plan} onDayClick={handleDayClick} selectedDay={selectedDay} />
-      )}
+
+        <div>
+          <PomodoroTimer 
+            onTimerComplete={handlePomodoroComplete} 
+            selectedChapter={selectedChapter}
+            timerState={timerState}
+            updateTimerState={updateTimerState}
+          />
+          <select
+            className="select select-bordered w-full mt-4"
+            value={selectedChapter}
+            onChange={(e) => setSelectedChapter(e.target.value)}
+          >
+            <option value="">Select a module</option>
+            {Array.from(new Set(plan.flatMap(day => day.tasks.map(task => task.description)))).map(chapter => (
+              <option key={chapter} value={chapter}>{chapter}</option>
+            ))}
+          </select>
+          <div className="mt-4">
+            <WhiteNoisePlayer />
+          </div>
+        </div>
+      </div>
 
       {showReflection && (
         <div className="modal modal-open">
