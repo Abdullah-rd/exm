@@ -88,8 +88,8 @@ export function PomodoroTimer({ onTimerComplete, selectedChapter, timerState, up
 
   const resetTimer = () => {
     updateTimerState({
-      minutes: 0,
-      seconds: 5,
+      minutes: 25,
+      seconds: 0,
       isActive: false,
       isBreak: false
     });
