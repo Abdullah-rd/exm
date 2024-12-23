@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Calendar } from './Calendar'
 import { PomodoroTimer } from './PomodoroTimer'
 import { StudyStatistics } from './StudyStatistics'
-import { WhiteNoisePlayer } from './WhiteNoisePlayer'
+// import { WhiteNoisePlayer } from './WhiteNoisePlayer'
 
 export default function EnhancedStudyPlanTracker() {
   const [plan, setPlan] = useState(() => studyPlan.map(day => ({
@@ -418,7 +418,7 @@ export default function EnhancedStudyPlanTracker() {
             ))}
           </select>
           <div className="mt-4">
-            <WhiteNoisePlayer />
+            {/* <WhiteNoisePlayer /> */}
           </div>
         </div>
       </div>

@@ -2,11 +2,40 @@
 
 import React from 'react';
 import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
-export function StudyStatistics({ studySessions }) {
+export function StudyStatistics({ studySessions = [] }) {
+  // Guard against undefined/null studySessions
+  if (!studySessions || studySessions.length === 0) {
+    return (
+      <div className="card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <h2 className="card-title">Study Statistics</h2>
+          <div className="alert">
+            <span>No study sessions recorded yet. Start studying to see your statistics!</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const getModuleStats = () => {
     const stats = studySessions.reduce((acc, session) => {
       if (!acc[session.chapter]) {
@@ -15,7 +44,10 @@ export function StudyStatistics({ studySessions }) {
       acc[session.chapter] += session.duration;
       return acc;
     }, {});
-    return Object.entries(stats).map(([module, duration]) => ({ module, duration: Math.round(duration / 60) }));
+    return Object.entries(stats).map(([module, duration]) => ({
+      module,
+      duration: Math.round(duration / 60)
+    }));
   };
 
   const getPeriodStats = () => {
@@ -33,7 +65,10 @@ export function StudyStatistics({ studySessions }) {
       acc[period] += session.duration;
       return acc;
     }, {});
-    return Object.entries(stats).map(([period, duration]) => ({ period, duration: Math.round(duration / 60) }));
+    return Object.entries(stats).map(([period, duration]) => ({
+      period,
+      duration: Math.round(duration / 60)
+    }));
   };
 
   const getTotalStudyTime = () => {
@@ -42,7 +77,10 @@ export function StudyStatistics({ studySessions }) {
 
   const getMostStudiedPeriod = () => {
     const periodStats = getPeriodStats();
-    return periodStats.reduce((max, period) => period.duration > max.duration ? period : max).period;
+    if (periodStats.length === 0) return 'No data';
+    return periodStats.reduce((max, period) => 
+      period.duration > max.duration ? period : max
+    ).period;
   };
 
   const moduleData = {
@@ -74,10 +112,19 @@ export function StudyStatistics({ studySessions }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+    },
     scales: {
       y: {
         beginAtZero: true,
-      },
+        title: {
+          display: true,
+          text: 'Minutes'
+        }
+      }
     },
   };
 
@@ -85,20 +132,40 @@ export function StudyStatistics({ studySessions }) {
     <div className="card bg-base-100 shadow-xl">
       <div className="card-body">
         <h2 className="card-title">Study Statistics</h2>
-        <p>Total study time: {getTotalStudyTime()} minutes</p>
-        <p>Most studied period: {getMostStudiedPeriod()}</p>
         
-        <h3 className="font-bold mt-4">Studied time per module</h3>
-        <div className="h-64 w-full">
-          <Bar data={moduleData} options={options} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+          <div className="stats shadow">
+            <div className="stat">
+              <div className="stat-title">Total Study Time</div>
+              <div className="stat-value">{getTotalStudyTime()}</div>
+              <div className="stat-desc">minutes</div>
+            </div>
+          </div>
+
+          <div className="stats shadow">
+            <div className="stat">
+              <div className="stat-title">Peak Study Period</div>
+              <div className="stat-value text-2xl">{getMostStudiedPeriod()}</div>
+            </div>
+          </div>
         </div>
 
-        <h3 className="font-bold mt-4">Time Studied per Period</h3>
-        <div className="h-64 w-full">
-          <Bar data={periodData} options={options} />
+        <div className="space-y-6">
+          <div>
+            <h3 className="font-bold text-lg mb-2">Time Studied per Module</h3>
+            <div className="h-64 w-full">
+              <Bar data={moduleData} options={options} />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-bold text-lg mb-2">Time Studied per Period</h3>
+            <div className="h-64 w-full">
+              <Bar data={periodData} options={options} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

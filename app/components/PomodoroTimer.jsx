@@ -11,7 +11,7 @@ export function PomodoroTimer({ onTimerComplete, selectedChapter, timerState, up
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     audioContextRef.current = audioContext;
 
-    fetch('/bell-sound.mp3')
+    fetch('/bell-sound.wav')
       .then(response => response.arrayBuffer())
       .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
       .then(audioBuffer => {
@@ -88,8 +88,8 @@ export function PomodoroTimer({ onTimerComplete, selectedChapter, timerState, up
 
   const resetTimer = () => {
     updateTimerState({
-      minutes: 25,
-      seconds: 0,
+      minutes: 0,
+      seconds: 5,
       isActive: false,
       isBreak: false
     });

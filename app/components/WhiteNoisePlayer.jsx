@@ -6,7 +6,7 @@ import Image from 'next/image'
 const audioTracks = [
   { title: 'Rain', src: '/musicAttachment/rain.mp3', image: '/musicAttachment/rain.jpg' },
   { title: 'White Noise', src: '/musicAttachment/white.mp3', image: '/musicAttachment/white.jpg' },
-  { title: 'Mountain Green', src: '/musicAttachment/green.mp3', image: '/musicAttachment/green.jpg' },
+//   { title: 'Mountain Green', src: '/musicAttachment/green.mp3', image: '/musicAttachment/green.jpg' },
 
 ]
 
@@ -151,7 +151,6 @@ export function WhiteNoisePlayer() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            
             <button className="btn btn-circle btn-primary" onClick={handlePlayPause}>
               {isPlaying ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
